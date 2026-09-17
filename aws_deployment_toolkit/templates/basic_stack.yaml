@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Bundled example stack for the AWS Deployment Toolkit: a versioned S3
+  bucket for storing deployment artifacts, and an SNS topic that can be
+  used to notify subscribers about deployment events.
+
+Parameters:
+  BucketNamePrefix:
+    Type: String
+    Default: deployment-artifacts
+    Description: Prefix used for the generated artifact bucket name.
+  TopicDisplayName:
+    Type: String
+    Default: DeploymentNotifications
+    Description: Display name for the SNS notification topic.
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
+      VersioningConfiguration:
+        Status: Enabled
+
+  DeploymentTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Ref TopicDisplayName
+      TopicName: !Sub "${TopicDisplayName}-topic"
+
+Outputs:
+  BucketName:
+    Description: Name of the created artifact bucket.
+    Value: !Ref ArtifactBucket
+  TopicArn:
+    Description: ARN of the created SNS topic.
+    Value: !Ref DeploymentTopic
