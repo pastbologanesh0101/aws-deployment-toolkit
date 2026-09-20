@@ -107,3 +107,43 @@ def test_sync_raises_clean_error_for_missing_local_dir():
     syncer = S3Syncer(region_name=REGION)
     with pytest.raises(FileNotFoundError):
         syncer.sync("/path/does/not/exist/at/all", "some-bucket")
+
+
+@mock_aws
+def test_sync_places_files_under_prefix(tmp_path):
+    _write(tmp_path, "a.txt", "hello")
+    _write(tmp_path, "sub/b.txt", "world")
+    syncer = S3Syncer(region_name=REGION)
+    bucket = "prefixed-bucket"
+
+    plan = syncer.sync(str(tmp_path), bucket, prefix="releases/v1")
+
+    assert sorted(plan.to_upload_new) == ["releases/v1/a.txt", "releases/v1/sub/b.txt"]
+    keys = {o["Key"] for o in syncer.s3.list_objects_v2(Bucket=bucket)["Contents"]}
+    assert keys == {"releases/v1/a.txt", "releases/v1/sub/b.txt"}
+
+    # A second sync under the same prefix must see them as unchanged, not
+    # re-uploaded as new -- this only holds if prefix stripping/joining
+    # round-trips correctly between build_plan and sync.
+    plan2 = syncer.sync(str(tmp_path), bucket, prefix="releases/v1")
+    assert plan2.to_upload_new == []
+    assert sorted(plan2.unchanged) == ["releases/v1/a.txt", "releases/v1/sub/b.txt"]
+
+
+@mock_aws
+def test_sync_empty_directory_produces_no_changes(tmp_path):
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    syncer = S3Syncer(region_name=REGION)
+    bucket = "empty-dir-bucket"
+
+    plan = syncer.sync(str(empty_dir), bucket)
+
+    assert plan.to_upload_new == []
+    assert plan.to_upload_changed == []
+    assert plan.unchanged == []
+    assert plan.total_changes == 0
+    # An empty directory still creates the bucket (that part of the plan
+    # doesn't depend on there being any files to upload).
+    assert plan.bucket_created is True
+    assert syncer.bucket_exists(bucket)
