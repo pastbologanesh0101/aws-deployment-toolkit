@@ -21,6 +21,10 @@ def zip_directory(source_dir: str) -> bytes:
     """Zip up a local directory's contents (not the directory itself)."""
     source_path = Path(source_dir)
     if not source_path.is_dir():
+        if source_path.exists():
+            raise FileNotFoundError(
+                f"Expected a directory but found a file: {source_dir}"
+            )
         raise FileNotFoundError(f"Local directory does not exist: {source_dir}")
 
     buffer = io.BytesIO()

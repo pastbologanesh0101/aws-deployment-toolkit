@@ -106,6 +106,10 @@ class S3Syncer:
         """Compute what would change, without uploading anything."""
         local_path = Path(local_dir)
         if not local_path.is_dir():
+            if local_path.exists():
+                raise FileNotFoundError(
+                    f"Expected a directory but found a file: {local_dir}"
+                )
             raise FileNotFoundError(f"Local directory does not exist: {local_dir}")
 
         plan = SyncPlan()

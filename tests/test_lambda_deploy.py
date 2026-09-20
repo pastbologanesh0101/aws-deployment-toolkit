@@ -80,6 +80,15 @@ def test_deploy_raises_clean_error_for_missing_source_dir():
         deployer.deploy("some-function", "/nonexistent/source/dir")
 
 
+@mock_aws
+def test_deploy_raises_specific_error_when_source_dir_is_a_file(tmp_path):
+    file_path = tmp_path / "handler.py"
+    file_path.write_text("def main(event, context):\n    return event\n")
+    deployer = LambdaDeployer(region_name=REGION)
+    with pytest.raises(FileNotFoundError, match="found a file"):
+        deployer.deploy("some-function", str(file_path))
+
+
 def test_zip_directory_contains_expected_files(tmp_path):
     _write_handler(tmp_path)
     (tmp_path / "sub").mkdir()

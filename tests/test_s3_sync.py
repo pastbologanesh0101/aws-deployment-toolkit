@@ -110,6 +110,14 @@ def test_sync_raises_clean_error_for_missing_local_dir():
 
 
 @mock_aws
+def test_sync_raises_specific_error_when_path_is_a_file(tmp_path):
+    file_path = _write(tmp_path, "not_a_dir.txt", "hello")
+    syncer = S3Syncer(region_name=REGION)
+    with pytest.raises(FileNotFoundError, match="found a file"):
+        syncer.sync(str(file_path), "some-bucket")
+
+
+@mock_aws
 def test_sync_places_files_under_prefix(tmp_path):
     _write(tmp_path, "a.txt", "hello")
     _write(tmp_path, "sub/b.txt", "world")
