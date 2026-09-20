@@ -137,6 +137,32 @@ tests/
     test_cloudformation.py
 ```
 
+## Troubleshooting / FAQ
+
+**`adt lambda-deploy` fails with `InvalidParameterValueException` about the
+execution role.** Lambda requires `--role-arn` to be a real IAM role whose
+trust policy allows `lambda.amazonaws.com` to assume it. The `--role-arn`
+default (`arn:aws:iam::123456789012:role/lambda-role`) is a placeholder
+that only works against moto's mocked Lambda — against real AWS you must
+pass a real role ARN you've created, e.g.
+`--role-arn arn:aws:iam::<account-id>:role/<your-role>`.
+
+**`adt cfn-deploy` says the stack was "updated" but nothing changed.**
+CloudFormation returns "No updates are to be performed" when the template
+and parameters are identical to the current stack state. The toolkit
+treats that as a successful `no_updates` action rather than an error —
+check the printed action (`created` / `updated` / `no_updates`) if you
+need to distinguish a real update from a no-op.
+
+**`adt s3-sync` re-uploads a file every time even though its content
+hasn't changed.** This can happen for objects that were uploaded outside
+the toolkit as *multipart* uploads (common above ~8MB via some tools or
+the S3 console) — a multipart object's ETag is not a plain MD5 of its
+body, so it will never match the local MD5 the toolkit computes, and every
+sync will treat it as changed. Files the toolkit itself uploads always use
+a single-part `upload_file` call and aren't affected; only pre-existing
+multipart objects hit this.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
